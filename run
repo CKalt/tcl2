@@ -1,0 +1,6 @@
+#!/bin/sh
+APP_NAME=tcln
+cargo run --release -- "${@:1}" 2>&1 | tee ${APP_NAME}.out
+#export RAYON_NUM_THREADS=20; cargo run --release 2>&1 | tee ${APP_NAME}
+#cargo run --release > ${APP_NAME}.out
+vi ${APP_NAME}.out
