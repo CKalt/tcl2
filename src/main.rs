@@ -1,16 +1,37 @@
 use std::io::prelude::*;
 use std::net::TcpStream;
 use serde_json::Value;
+use structopt::StructOpt;
+use std::fs;
 
-const REQUEST_PORT: u32 = 8080;
-const RESPONSE_PORT: u32 = 8081;
+const REQUEST_PORT:  &str = "8080";
+const RESPONSE_PORT: &str = "8081";
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "basic")]
+struct Opt {
+    #[structopt(default_value = REQUEST_PORT, short = "i", long = "input-port")]
+    input_port: u32,
+    #[structopt(default_value = RESPONSE_PORT, short = "o", long = "output-port")]
+    output_port: u32,
+    #[structopt(default_value = "localhost", short = "u", long = "url")]
+    url: String,
+    #[structopt(short = "r", long = "request")]
+    request_file: Option<String>,
+}
 
 fn get_url(port: u32) -> String {
     format!("localhost:{}", port)
 }
 
-fn handle_client(mut request_stream: TcpStream) -> std::io::Result<()> {
-    let sample_request = r#"
+fn handle_client(mut request_stream: TcpStream, opt: Opt)
+            -> std::io::Result<()> {
+
+    let sample_request : String = 
+        if let Some(sample_request) = opt.request_file {
+                fs::read_to_string(sample_request).unwrap()
+        } else {
+        r#"
 {
   "command": "RSHOT",
   "objectType": "eventJSON",
@@ -19,9 +40,11 @@ fn handle_client(mut request_stream: TcpStream) -> std::io::Result<()> {
   "archiveFilename": "Archive_211001_140321", 
   "archivePath": "./path/to/archive/file/"
 }
-"#;
+"#.to_string()
+        };
 
-    let r_json = serde_json::from_str::<Value>(sample_request).unwrap();
+    let r_json = serde_json::from_str::<Value>(&sample_request[..]).unwrap();
+
     let json_text = serde_json::to_string(&r_json).unwrap();
     println!("request={}", json_text);
 
@@ -42,7 +65,8 @@ fn handle_client(mut request_stream: TcpStream) -> std::io::Result<()> {
         _ => {}
     }
 
-    let mut response_stream = TcpStream::connect(get_url(RESPONSE_PORT)).unwrap();
+    let mut response_stream =
+        TcpStream::connect(get_url(opt.output_port)).unwrap();
     let mut buffer = String::new();
     response_stream.read_to_string(&mut buffer)?;
     println!("{}", buffer);
@@ -51,7 +75,19 @@ fn handle_client(mut request_stream: TcpStream) -> std::io::Result<()> {
 }
 
 fn main() -> std::io::Result<()> {
-    let request_stream = TcpStream::connect(get_url(REQUEST_PORT)).unwrap();
-    handle_client(request_stream)?;
+    let opt = Opt::from_args();
+    println!("opt={:?}", opt);
+
+    let url = get_url(opt.input_port);
+    let request_stream =
+        match TcpStream::connect(&url[..]) {
+            Ok(stream) => stream,
+            Err(err) => {
+                eprintln!("cannot connect {} {}", url, err);
+                std::process::exit(1);
+            }
+        };
+
+    handle_client(request_stream, opt)?;
     Ok(())
 }
