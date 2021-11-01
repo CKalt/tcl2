@@ -4,24 +4,24 @@ use serde_json::Value;
 use structopt::StructOpt;
 use std::fs;
 
-const REQUEST_PORT:  &str = "8080";
-const RESPONSE_PORT: &str = "8081";
+const DEFAULT_REQUEST_PORT:  &str = "8080";
+const DEFAULT_RESPONSE_PORT: &str = "8081";
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "basic")]
 struct Opt {
-    #[structopt(default_value = REQUEST_PORT, short = "i", long = "input-port")]
+    #[structopt(default_value = DEFAULT_REQUEST_PORT, short = "i", long = "input-port")]
     input_port: u32,
-    #[structopt(default_value = RESPONSE_PORT, short = "o", long = "output-port")]
+    #[structopt(default_value = DEFAULT_RESPONSE_PORT, short = "o", long = "output-port")]
     output_port: u32,
-    #[structopt(default_value = "localhost", short = "u", long = "url")]
-    url: String,
+    #[structopt(default_value = "localhost", short = "h", long = "host")]
+    host: String,
     #[structopt(short = "r", long = "request")]
     request_file: Option<String>,
 }
 
-fn get_url(port: u32) -> String {
-    format!("localhost:{}", port)
+fn get_url(host: &String, port: u32) -> String {
+    format!("{}:{}", host, port)
 }
 
 fn handle_client(mut request_stream: TcpStream, opt: Opt)
@@ -66,7 +66,7 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
     }
 
     let mut response_stream =
-        TcpStream::connect(get_url(opt.output_port)).unwrap();
+        TcpStream::connect(get_url(&opt.host, opt.output_port)).unwrap();
     let mut buffer = String::new();
     response_stream.read_to_string(&mut buffer)?;
     println!("{}", buffer);
@@ -78,7 +78,7 @@ fn main() -> std::io::Result<()> {
     let opt = Opt::from_args();
     println!("opt={:?}", opt);
 
-    let url = get_url(opt.input_port);
+    let url = get_url(&opt.host, opt.input_port);
     let request_stream =
         match TcpStream::connect(&url[..]) {
             Ok(stream) => stream,
