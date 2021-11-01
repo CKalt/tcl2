@@ -46,10 +46,15 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
     let r_json = serde_json::from_str::<Value>(&sample_request[..]).unwrap();
 
     let json_text = serde_json::to_string(&r_json).unwrap();
-    println!("request={}", json_text);
+    println!("request(pretty validated)={}", json_text);
+    println!("request(orig)={}", sample_request);
 
-    let len_msg = format!("{:08x}", json_text.len());
+    // Note we send the original request that has been validated
+    // by this point in the code.
+
+    let len_msg = format!("{:08x}", sample_request.len());
     let wresult = request_stream.write(len_msg.as_bytes());
+
     match wresult {
         Err(e) => {
             println!("error writing len_msg: {}", e);
@@ -57,7 +62,7 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
         _ => {}
     }
 
-    let wresult = request_stream.write(json_text.as_bytes());
+    let wresult = request_stream.write(sample_request.as_bytes());
     match wresult {
         Err(e) => {
             println!("error writing json_text: {}", e);
