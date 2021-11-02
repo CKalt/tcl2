@@ -1,9 +1,1 @@
-WHAT
-{
-  "command": "RSHOT",
-  "objectType": "eventJSON",
-  "siteCode": "ds12", 
-  "holeNumber": "hole3",  
-  "archiveFilename": "Archive_211001_140321", 
-  "archivePath": "./path/to/archive/file/"
-}
+{"command":"FETCH","parameters":["REPLAY","archive_211015_123637"]}
