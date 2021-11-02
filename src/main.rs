@@ -19,6 +19,8 @@ struct Opt {
     host: String,
     #[structopt(short = "r", long = "request")]
     request_file: Option<String>,
+    #[structopt(short = "p", long = "pretty-json")]
+    pretty_json: bool,
 }
 
 fn get_url(host: &String, port: u32) -> String {
@@ -46,8 +48,11 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
 
     let rq_json = serde_json::from_str::<Value>(&sample_request[..]).unwrap();
 
-    let rq_json_text = serde_json::to_string(&rq_json).unwrap();
-    println!("request(pretty validated)={}", rq_json_text);
+    if opt.pretty_json {
+        let rq_json_text = serde_json::to_string_pretty(&rq_json).unwrap();
+        println!("request(pretty validated)={}", rq_json_text);
+    }
+
     println!("request(orig)={}", sample_request);
 
     // Note we send the original request that has been validated
@@ -74,26 +79,37 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
     let mut response_stream =
         TcpStream::connect(get_url(&opt.host, opt.output_port)).unwrap();
 
-    let mut len_buf: [u8; 8] = [0; 8];
-    request_stream.read_exact(&mut len_buf).unwrap();
-    println!("8 bytes read = {:?}", len_buf);
-    let len_str = str::from_utf8(&len_buf).unwrap();
-    let bytes_to_read: usize
-        = usize::from_str_radix(len_str.trim(), 16).unwrap();
-    println!("converts to hex str={} or bytes_to_read={}", len_str, bytes_to_read);
+    let mut read_count = 100;
 
-    // read exactly `bytes_to_read` len and error if not 
-    // valid json
-    let mut response_buf = vec![0u8; bytes_to_read];
-    response_stream.read_exact(&mut response_buf).unwrap();
-    let response = str::from_utf8(&response_buf).unwrap();
-    println!("{} bytes received=[{}]", bytes_to_read, response);
+    loop {
+        let mut len_buf: [u8; 8] = [0; 8];
+        response_stream.read_exact(&mut len_buf).unwrap();
+        println!("8 bytes read = {:?}", len_buf);
+        let len_str = str::from_utf8(&len_buf).unwrap();
+        let bytes_to_read: usize
+            = usize::from_str_radix(len_str.trim(), 16).unwrap();
+        println!("converts to hex str={} or bytes_to_read={}", len_str, bytes_to_read);
 
-    /*
-    let rsp_json = serde_json::from_str::<Value>(&buffer[..]).unwrap();
-    let rsp_json_text = serde_json::to_string(&rsp_json).unwrap();
-    println!("response(pretty validated)={}", rsp_json_text);
-    */
+        // read exactly `bytes_to_read` len and error if not 
+        // valid json
+        let mut response_buf = vec![0u8; bytes_to_read];
+        response_stream.read_exact(&mut response_buf).unwrap();
+        let response = str::from_utf8(&response_buf).unwrap();
+        println!("{} bytes received=[{}]", bytes_to_read, response);
+
+        let rsp_json =
+            serde_json::from_str::<Value>(response).unwrap();
+
+        if opt.pretty_json {
+            let rsp_json_text = serde_json::to_string_pretty(&rsp_json).unwrap();
+            println!("response(pretty validated)={}", rsp_json_text);
+        }
+
+        read_count -= 1;
+        if read_count == 0 {
+            break;
+        }
+    }
 
     Ok(())
 }
