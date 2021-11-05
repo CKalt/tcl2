@@ -77,7 +77,13 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
     }
 
     let mut response_stream =
-        TcpStream::connect(get_url(&opt.host, opt.output_port)).unwrap();
+        match TcpStream::connect(get_url(&opt.host, opt.output_port)) {
+            Ok(response) => response,
+            Err(e) => {
+                println!("connect failed on output_port e = {:?}", e);
+                std::process::exit(1);
+            }
+        };
 
     let mut read_count = 100;
 
