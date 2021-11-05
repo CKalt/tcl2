@@ -80,7 +80,7 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
         match TcpStream::connect(get_url(&opt.host, opt.output_port)) {
             Ok(response) => response,
             Err(e) => {
-                println!("connect failed on output_port e = {:?}", e);
+                eprintln!("connect failed on output_port e = {:?}", e);
                 std::process::exit(1);
             }
         };
@@ -129,7 +129,7 @@ fn main() -> std::io::Result<()> {
         match TcpStream::connect(&url[..]) {
             Ok(stream) => stream,
             Err(err) => {
-                eprintln!("cannot connect {} {}", url, err);
+                eprintln!("connect failed on input port {} {}", url, err);
                 std::process::exit(1);
             }
         };
