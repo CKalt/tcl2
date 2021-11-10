@@ -1,0 +1,7 @@
+{
+   "command" : "XFER",
+   "parameters" : [
+      "LIST_ARCHIVE"
+   ],
+   "subcmd" : "REPLAY"
+}

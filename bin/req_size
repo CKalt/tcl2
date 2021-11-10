@@ -1,0 +1,11 @@
+#!/bin/sh
+if [ $# -ne 1 ]
+  then
+    echo "USAGE $0 <request_file_name>"
+fi
+REQ_FILE=$1
+DEC_STR=$(wc -c ${REQ_FILE} | awk '{print $1}')
+DEC_SIZE=$((${DEC_STR}))
+echo "DEC_SIZE=$DEC_SIZE"
+HEX_SIZE=$(printf '%08x\n' $DEC_SIZE)
+echo "HEX_SIZE=$HEX_SIZE"
