@@ -1,0 +1,5 @@
+   Compiling tcl2 v0.1.0 (/home/chris/projects/rust/tcl2)
+    Finished release [optimized] target(s) in 11.39s
+     Running `target/release/tcl2 -h 172.27.45.242 -i 62201 -o 62200 -r sample_request.json`
+opt=Opt { input_port: 62201, output_port: 62200, host: "172.27.45.242", request_file: Some("sample_request.json"), pretty_json: false }
+connect failed on input port 172.27.45.242:62201 Connection refused (os error 111)
