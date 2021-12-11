@@ -98,7 +98,7 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
         // read len msg
         let mut len_buf: [u8; 8] = [0; 8];
         println!("TP004: read_exact called for {} bytes from response stream",
-            len_but.len());
+            len_buf.len());
         response_stream.read_exact(&mut len_buf).unwrap();
         println!("TP00{}.1: 8 bytes read = {:?}", tp_i, len_buf);
         let len_str = str::from_utf8(&len_buf).unwrap();
@@ -115,7 +115,9 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
         println!("TP00{}: read_exact len={}", tp_i, response_buf.len());
         response_stream.read_exact(&mut response_buf).unwrap();
         let response = str::from_utf8(&response_buf).unwrap();
-        println!("TP00{}.1: bytes received=[{}]", tp_i, bytes_to_read, response);
+
+        println!("TP00{}.1: {} bytes received=[{}]", tp_i,
+            response_buf.len(), response);
 
         let rsp_json =
             serde_json::from_str::<Value>(response).unwrap();
