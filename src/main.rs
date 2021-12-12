@@ -4,6 +4,7 @@ use serde_json::Value;
 use structopt::StructOpt;
 use std::fs;
 use std::str;
+use std::io::ErrorKind;
 
 const DEFAULT_REQUEST_PORT:  &str = "8080";
 const DEFAULT_RESPONSE_PORT: &str = "8081";
@@ -97,15 +98,25 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
     loop {
         // read len msg
         let mut len_buf: [u8; 8] = [0; 8];
-        println!("TP00{}: read_exact called for {} bytes from response stream",
-            tp_i,
-            len_buf.len());
-        response_stream.read_exact(&mut len_buf).unwrap();
-        println!("TP00{}.1: 8 bytes read = {:?}", tp_i, len_buf);
+        println!("TP00{}: (a) calling read_exact called {} bytes from\n\
+                  response stream",
+                        tp_i,
+                        len_buf.len());
+
+        if let Err(e) = response_stream.read_exact(&mut len_buf) {
+            if e.kind() == ErrorKind::UnexpectedEof {
+                break;
+            }
+            else {
+                panic!("Error while attempting to read len_msg e={:?}", e);
+            }
+        }
+
+        println!("TP00{}.1: (b) 8 bytes read = {:?}", tp_i, len_buf);
         let len_str = str::from_utf8(&len_buf).unwrap();
         let bytes_to_read: usize
             = usize::from_str_radix(len_str.trim(), 16).unwrap();
-        println!("TP00{}.2: converts to hex str={} or bytes_to_read={}",
+        println!("TP00{}.2: (c) converts to hex str={} or bytes_to_read={}",
             tp_i, len_str, bytes_to_read);
 
         tp_i += 1;
@@ -113,11 +124,11 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
         // read exactly `bytes_to_read` len and error if not 
         // valid json
         let mut response_buf = vec![0u8; bytes_to_read];
-        println!("TP00{}: read_exact len={}", tp_i, response_buf.len());
+        println!("TP00{}: (d) read_exact len={}", tp_i, response_buf.len());
         response_stream.read_exact(&mut response_buf).unwrap();
         let response = str::from_utf8(&response_buf).unwrap();
 
-        println!("TP00{}.1: {} bytes received=[{}]", tp_i,
+        println!("TP00{}.1: (e) {} bytes received=[{}]", tp_i,
             response_buf.len(), response);
 
         let rsp_json =
@@ -125,7 +136,7 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
 
         if opt.pretty_json {
             let rsp_json_text = serde_json::to_string_pretty(&rsp_json).unwrap();
-            println!("TP00{}.2: response(pretty validated)={}", tp_i, rsp_json_text);
+            println!("TP00{}.2: (f) response(pretty validated)={}", tp_i, rsp_json_text);
         }
 
         read_count -= 1;
