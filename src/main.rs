@@ -97,7 +97,8 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
     loop {
         // read len msg
         let mut len_buf: [u8; 8] = [0; 8];
-        println!("TP004: read_exact called for {} bytes from response stream",
+        println!("TP00{}: read_exact called for {} bytes from response stream",
+            tp_i,
             len_buf.len());
         response_stream.read_exact(&mut len_buf).unwrap();
         println!("TP00{}.1: 8 bytes read = {:?}", tp_i, len_buf);
