@@ -1,10 +1,12 @@
 use std::io::prelude::*;
-use std::net::TcpStream;
+use std::net::{TcpStream,Shutdown};
 use serde_json::Value;
 use structopt::StructOpt;
 use std::fs;
 use std::str;
 use std::io::ErrorKind;
+use ctrlc;
+use std::sync::Arc;
 
 const DEFAULT_REQUEST_PORT:  &str = "8080";
 const DEFAULT_RESPONSE_PORT: &str = "8081";
@@ -83,7 +85,7 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
     println!("TP002.1: write returned");
 
     println!("TP003: resp-strm connect");
-    let mut response_stream =
+    let response_stream =
         match TcpStream::connect(get_url(&opt.host, opt.output_port)) {
             Ok(response) => response,
             Err(e) => {
@@ -92,6 +94,14 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
             }
         };
     println!("TP003.1: connected to response_stream");
+
+    // ctrlc handler
+    let response_stream = Arc::new(response_stream);
+    let handle = Arc::clone(&response_stream);
+    ctrlc::set_handler(move || {
+        let _ = handle.shutdown(Shutdown::Read);
+    }).unwrap();
+
     let mut read_count = 100;
 
     let mut tp_i = 4;
@@ -103,9 +113,9 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
                         tp_i,
                         len_buf.len());
 
-        if let Err(e) = response_stream.read_exact(&mut len_buf) {
+        if let Err(e) = (&*response_stream).read_exact(&mut len_buf) {
             if e.kind() == ErrorKind::UnexpectedEof {
-                break;
+                panic!("ctrl c pressed e={:?}", e);
             }
             else {
                 panic!("Error while attempting to read len_msg e={:?}", e);
@@ -125,7 +135,7 @@ fn handle_client(mut request_stream: TcpStream, opt: Opt)
         // valid json
         let mut response_buf = vec![0u8; bytes_to_read];
         println!("TP00{}: (d) read_exact len={}", tp_i, response_buf.len());
-        response_stream.read_exact(&mut response_buf).unwrap();
+        (&*response_stream).read_exact(&mut response_buf).unwrap();
         let response = str::from_utf8(&response_buf).unwrap();
 
         println!("TP00{}.1: (e) {} bytes received=[{}]", tp_i,
@@ -166,5 +176,6 @@ fn main() -> std::io::Result<()> {
         };
 
     handle_client(request_stream, opt)?;
+    println!("Done");
     Ok(())
 }
